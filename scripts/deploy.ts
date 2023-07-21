@@ -1,22 +1,22 @@
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
+  // const currentTimestampInSeconds = Math.round(Date.now() / 1000);
+  // const unlockTime = currentTimestampInSeconds + 60;
 
-  const lockedAmount = ethers.parseEther("0.001");
+  // const lockedAmount = ethers.parseEther("0.001");
+  const Tracking = await hre.ethers.getContractFactory("Tracking");
+  const tracking = Tracking.deploy();
+  // const Tracking = await ethers.getContractFactory("Tracking");
 
-  const lock = await ethers.deployContract("Lock", [unlockTime], {
-    value: lockedAmount,
-  });
+  // const tracking = await ethers.deployContract("Tracking", [unlockTime], {
+  //   value: lockedAmount,
+  // });
 
-  await lock.waitForDeployment();
+  // await tracking.waitForDeployment();
 
-  console.log(
-    `Lock with ${ethers.formatEther(
-      lockedAmount
-    )}ETH and unlock timestamp ${unlockTime} deployed to ${lock.target}`
-  );
+  console.log(`Tracking deployed to ${(await tracking).target}, using target`);
+  console.log(`Tracking deployed to ${(await tracking).getAddress()}, using getAddress method`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
