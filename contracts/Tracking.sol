@@ -23,7 +23,7 @@ contract Tracking {
   mapping(address => Shipment[]) public shipments;
   uint256 public shipmentCount;
 
-  struct TypeShipement {
+  struct TypeShipment {
     address sender;
     address receiver;
     uint256 pickupTime;
@@ -35,7 +35,7 @@ contract Tracking {
   }
 
   // this is where all data will be kept to be displayed in the frontend
-  TypeShipement[] typeShipments;
+  TypeShipment[] typeShipments;
 
   event ShipmentCreated(
     address indexed send,
@@ -43,25 +43,25 @@ contract Tracking {
     uint256 pickupTime,
     uint256 distance,
     uint256 price
-  )
+  );
 
   event ShipmentInTransit(
     address indexed sender,
     address indexed receiver,
-    uint256 pickupTime,
-  )
+    uint256 pickupTime
+  );
 
   event ShipmentDelivered(
-    address indexed sender;
+    address indexed sender,
     address indexed receiver,
-    uint256 deliveryTime,
-  )
+    uint256 deliveryTime
+  );
 
   event ShipmentPaid(
-    address indexed sender;
-    address indexed receiver;
-    uint256 amount;
-  )
+    address indexed sender,
+    address indexed receiver,
+    uint256 amount
+  );
 
   constructor() {
     shipmentCount = 0;
@@ -86,7 +86,7 @@ contract Tracking {
       _price,
       ShipmentStatus.PENDING, 
       false
-    ) 
+    ); 
 
     shipments[msg.sender].push(shipment);
     shipmentCount++;
@@ -97,7 +97,7 @@ contract Tracking {
         msg.sender,
         _receiver,
         _pickupTime,
-        _amount,
+        0,
         _distance,
         _price,
         ShipmentStatus.PENDING,
@@ -110,7 +110,7 @@ contract Tracking {
       _receiver,
       _pickupTime,
       _distance,
-      _price,
+      _price
     );
   }
 
@@ -128,5 +128,62 @@ contract Tracking {
     typeShipment.status = ShipmentStatus.IN_TRANSIT;
 
     emit ShipmentInTransit(_sender, _receiver, shipment.pickupTime);
+  }
+
+  //This function will be called when transaction is completed
+  function completeShipment(address _sender, address _receiver, uint256 _index) public {
+    Shipment storage shipment = shipments[_sender][_index];
+    TypeShipment storage typeShipment = typeShipments[_index];
+
+    require(shipment.receiver == _receiver, "Invalid revciever.");
+    require(shipment.status == ShipmentStatus.IN_TRANSIT, "Shipment not in transit");
+    require(shipment.isPaid, "Shipment already paid for.");
+
+    shipment.status = ShipmentStatus.DELIVERED;
+    shipment.deliveryTime = block.timestamp;
+    typeShipment.status = ShipmentStatus.DELIVERED;
+    typeShipment.deliveryTime = block.timestamp;
+
+    uint256 amount = shipment.price;
+
+    payable(shipment.sender).transfer(amount);
+
+    shipment.isPaid = true;
+    typeShipment.isPaid = true; 
+
+    emit ShipmentDelivered(_sender, _receiver, shipment.deliveryTime);
+    emit ShipmentPaid(_sender, _receiver, amount);
+  }
+
+  function getShipment(address _sender, uint256 _index) public view returns (
+    address,
+    address,
+    uint256,
+    uint256,
+    uint256,
+    uint256,
+    ShipmentStatus,
+    bool
+  ){
+    //Fetch target data
+    Shipment memory shipment = shipments[_sender][_index];
+
+    return (
+      shipment.sender, 
+      shipment.receiver,
+      shipment.deliveryTime,
+      shipment.distance,
+      shipment.pickupTime,
+      shipment.price,
+      shipment.status,
+      shipment.isPaid);
+  }
+
+  function getShipmentCount(address _sender) public view returns(uint256){
+    return shipments[_sender].length;
+  }
+
+  function getAllTransactions() public view returns(TypeShipment[] memory) {
+    return typeShipments;
   }
 }
